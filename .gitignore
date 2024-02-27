@@ -1,0 +1,7 @@
+__pycache__ 
+*.o
+*.img
+lab5fuse
+test1
+test2
+diskfmt.pyc
