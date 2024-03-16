@@ -190,14 +190,16 @@ void print_node_info(int inode_num, struct fs_inode curr_inode) {
     printf("ctime=%d\n", curr_inode.mtime);
 
 }
-
+/**
+ * Given a path of string type, retrieve its inode number.
+ */
 int path2inum(const char *path) {
     char *_path = strdup(path);
     char *token;
-    char *tokens[10]; // 11 excl root dir
+    char *tokens[10]; // 11 excl root dir.
     int depth = 0;
     
-    // 1. store all the dir name in array
+    // 1. Store all the dir name of the path in an array `tokens`.
     token = strtok(_path, "/");
     while (token != NULL) {
         tokens[depth] = token;
@@ -205,49 +207,48 @@ int path2inum(const char *path) {
         token = strtok(NULL, "/");
     }
     
-    // 2. start from root dir
+    // 2. Start from root dir inode.
     int curr_inode_num = 2; 
-    if (depth==0) {
+    if (depth == 0) {
         return curr_inode_num;
     }
 
-    // 3. curr i node that we will put in mem
+    // 3. Init inode cache.
     struct fs_inode inode_mem; 
 
-    // 1. if cannot read this inode  "/" from disk quit
+    // If cannot read this inode root from disk, quit immediately.
     if (block_read(&inode_mem, curr_inode_num, 1) < 0) {
         free(_path);
         printf("p2i=cannot read this inode root\n");
         return -EIO;
     }
-    // 4. iterate trhough each token not incl root
+
+    // 4. Iterate trhough each token not including root.
     for (int token_i = 0; token_i < depth; token_i++) {
 
         char* token_name = tokens[token_i];
         // printf("token_i=%d, token_name=%s\n",token_i, token_name);
         // printf("isdir=%d\n",S_ISDIR(curr_inode.mode));
         
-        // 2. make sure this is a directory. it its not a dir, then we cannot find the token name
+        // 4.1. make sure this is a directory. If it's not a dir, we cannot find the token name.
         if (!S_ISDIR(inode_mem.mode)) {
             free(_path);
             printf("p2i=this is not a dir\n");
             return -ENOTDIR;
         }
 
-        // 3.  load all the entries and find one that match the token name
+        // 4.2. Load all the entries and find one that match the token name
+        // - Get all its entries from disk (4096/32B = 128 entries) to memory.
+        // - Note: DIR_ENTRY_NUM = FS_BLOCK_SIZE / sizeof(struct fs_dirent).
         int token_found = 0;
-            
-        // get all its entries from disk (4096/32B = 128 entries) to memory
-        // int DIR_ENTRY_NUM = FS_BLOCK_SIZE / sizeof(struct fs_dirent);
         struct fs_dirent dir_entries[DIR_ENTRY_NUM];
-
         if (block_read(dir_entries, inode_mem.ptrs[0], 1) < 0) {
             free(_path);
             printf("p2i=cannot read entries\n");
             return -EIO;
         }
 
-        // Iterate through all the entries to find one that matches the curr token name
+        // 4.3 Iterate through all the entries to find one that matches the current token name.
         for (int dir_entry_i = 0; dir_entry_i < DIR_ENTRY_NUM; dir_entry_i++) {
             // printf("entry name %d=%s, tokenname=%s\n", dir_entry_i, dir_entries[dir_entry_i].name, token_name);
             if (strcmp(dir_entries[dir_entry_i].name, token_name ) == 0 && dir_entries[dir_entry_i].valid == 1) {
@@ -258,18 +259,16 @@ int path2inum(const char *path) {
             }
         }
 
-        // 4. if token not found
+        // 4.4 If token not found, return error.
         if (!token_found) {
             free(_path);
-            // printf("p2i=no token found %d\n", -ENOENT);
-            return -ENOENT; // file or dir not found erro
+            return -ENOENT; // File or dir not found error.
 
-        // 5. if found, get the inode. it could be another directory or file inode
+        // 4.5 If found, get the inode. This could be another directory or a file inode.
         } else {
 
-            // if this is not the last token, get the inode for next iteraton
+            // If this is not the last token, get the inode for next iteraton.
             if (token_i < depth -1) {
-                // printf("\ngetinode for next\n");
                 if (block_read(&inode_mem, curr_inode_num, 1) < 0) {
                     free(_path);
                     printf("p2i=cannot read inode for next iteration\n");
@@ -278,7 +277,7 @@ int path2inum(const char *path) {
             }
         }
 
-    } // finish iterate token. the last inode could be a file or dir inode
+    } // Finish iterate token. the last inode could be a file or dir inode.
 
     return curr_inode_num;
 }
@@ -307,7 +306,7 @@ int path2inum(const char *path) {
  *  [hints:
  *
  *    - what you should do is mostly copy.
- *
+
  *    - read fs_inode in fs5600.h and compare with struct stat.
  *
  *    - you can safely treat the types "ino_t", "mode_t", "nlink_t", "uid_t"
@@ -324,30 +323,22 @@ int path2inum(const char *path) {
  *      -- st_atime - set to same value as st_mtime
  *  ]
  */
-
 void inode2stat(struct stat *sb, struct fs_inode *in, uint32_t inode_num)
 {
     memset(sb, 0, sizeof(*sb));
-
-    /* your code here */
     sb->st_ino = inode_num;
     sb->st_mode = in->mode;
-    sb->st_nlink = 1;  // fs5600 doesn't support links, so this is set to 1
+    sb->st_nlink = 1;  // fs5600 doesn't support links, so this is set to 1.
     sb->st_uid = in->uid;
     sb->st_gid = in->gid;
     sb->st_size = in->size;
     sb->st_blocks = (in->size + FS_BLOCK_SIZE - 1) / FS_BLOCK_SIZE; // Round up to the nearest block
-
     sb->st_atime= in->mtime;
     sb->st_mtime = in->mtime;
     sb->st_ctime = in->ctime;
 }
 
-
-
-
 // ====== FUSE APIs ========
-
 /* init - this is called once by the FUSE framework at startup.
  *
  * The function reads the superblock and check if the magic number matches
@@ -363,20 +354,18 @@ void* fs_init(struct fuse_conn_info *conn)
 {
 
     struct fs_super sb;
-    // read super block from disk
+    // Read super block from disk.
     if (block_read(&sb, 0, 1) < 0) { exit(1); }
 
-    // check if the magic number matches fs5600
+    // Check if the magic number matches fs5600
     if (sb.magic != FS_MAGIC) { exit(1); }
 
-    // EXERCISE 1:
-    //  - get number of block and save it in global variable "numb_blocks"
-    //    (where to know the block number? check fs_super in fs5600.h)
-    num_blocks = sb.disk_size; // from superbloc
+    //  Get number of blocks and save it in global variable "numb_blocks"
+    num_blocks = sb.disk_size; // from superbloc in header file.
     
-    //  - read block bitmap to global variable "block_bitmap"
-    //    (this is a cache in memory; in later exercises, you will need to
-    //    write it back to disk. When? whenever bitmap gets updated.)
+    //  Read block bitmap to global variable "block_bitmap"
+    //  (this is a cache in memory; we will need to
+    //  write it back to disk later. When? whenever bitmap gets updated.)
     if (block_read(block_bitmap, 1, 1) < 0) {exit(1);}
 
     return NULL;
@@ -384,14 +373,14 @@ void* fs_init(struct fuse_conn_info *conn)
 
 
 /* EXERCISE 1:
- * statfs - get file system statistics
- * see 'man 2 statfs' for description of 'struct statvfs'.
- * Errors - none.
+ * This function computes the number of used blocks.
+ * The block_bitmap array contains information about which blocks are in use. 
+ * For each entry in the block_bitmap, it checks each of the 8 bits (since each byte has 8 bits 
+ * and each bit represents a block's status). If a bit is set to 1, 
+ * it means the corresponding block is in use, so used_blocks is incremented.
  */
-
 int calc_used_blocks() {
     int used_blocks_count = 0;
-    // int used_blocks_indexes[num_blocks]; 
 
     // For each block
     for (int i = 0; i < num_blocks; i++) {
@@ -404,22 +393,18 @@ int calc_used_blocks() {
         }
     }
 
-    // Print used blocks information
-    // printf("%d = [", used_blocks_count);
-    // for (int i = 0; i < used_blocks_count; i++) {
-    //     printf("%d", used_blocks_indexes[i]);
-    //     if (i < used_blocks_count - 1) {
-    //         printf(", ");
-    //     }
-    // }
-    // printf("]\n");
     return used_blocks_count;
 }
 
-
+/**
+ * Fill in the statistic of the file system.
+ * Helper: statfs - get file system statistics
+ * see 'man 2 statfs' for description of 'struct statvfs'.
+ * Errors - none.
+*/
 int fs_statfs(const char *path, struct statvfs *st)
 {
-    /* needs to return the following fields (ignore others):
+    /* Needs to return the following fields (ignore others):
      *   [DONE] f_bsize = FS_BLOCK_SIZE
      *   [DONE] f_namemax = <whatever your max namelength is>
      *   [TODO] f_blocks = total image - (superblock + block map)
@@ -441,22 +426,6 @@ int fs_statfs(const char *path, struct statvfs *st)
 }
 
 
-/* EXERCISE 2:
- * getattr - get file or directory attributes. For a description of
- * the fields in 'struct stat', read 'man 2 stat'.
- *
- * You should:
- *  1. parse the path given by "const char * path",
- *     find the inode of the specified file,
- *       [note: you should implement the helfer function "path2inum"
- *       and use it.]
- *  2. copy inode's information to "struct stat",
- *       [note: you should implement the helper function "inode2stat"
- *       and use it.]
- *  3. and return:
- *     ** success - return 0
- *     ** errors - path translation, ENOENT
- */
 void print_stat(struct stat *sb) {
     printf("\n>>>>>>>st_ino: %llu\n", (unsigned long long) sb->st_ino);
     printf("st_uid: %u\n", sb->st_uid);
@@ -469,22 +438,33 @@ void print_stat(struct stat *sb) {
     printf("st_ctime: %lld\n", (long long) sb->st_ctime);
 }
 
-
+/* EXERCISE 2:
+ * getattr - get file or directory attributes. For a description of
+ * the fields in 'struct stat', read 'man 2 stat'.
+ *
+ * This function will:
+ *  1. Parse the path given by "const char * path",
+ *     find the inode of the specified file,
+ *       [note: Use the helper function "path2inum"]
+ *  2. Copy the inode's information to "struct stat",
+ *       [note: Use the helper function "inode2stat"]
+ *  3. and return:
+ *     ** success - return 0
+ *     ** errors - path translation, ENOENT
+ */
 int fs_getattr(const char *path, struct stat *sb)
 {
-    
-    // 1. get the inode num and inode
+    // 1. Get the inode num and inode.
     char *_path = strdup(path);
     int inodenum = path2inum(_path);
     
-
-    // 2. check if inodenum returns error
+    // 2. Check if inodenum returns error.
     if (inodenum < 0) {
         printf("getattr-> cannot get inode num for %s\n", path);
         return inodenum; // return the error code
     }
 
-    // 3. get the inode
+    // 3. Get the inode.
     struct fs_inode curr_inode; 
     if (block_read(&curr_inode, inodenum, 1) < 0) {
         free(_path);
@@ -492,38 +472,41 @@ int fs_getattr(const char *path, struct stat *sb)
         return -EIO;
     }
 
-    // 4. copy inodes info to struct stat
+    // 4. Copy inodes info to struct stat.
     inode2stat(sb, &curr_inode, inodenum);
 
-
-    // 5. return success
+    // 5. Return success.
     return 0;
 }
 
-// given a dir path, get the dir entries (array of dirrectory entries)
+/**
+ * Given a dir path, get the dir entries (array of directory entries).
+ */
 int get_dir_entries(const char *path, struct fs_dirent *dir_entries) {
+    // 1. Get the inode number from the path copy.
     char *_path = strdup(path);
     int dir_inodenum = path2inum(_path);
     
-    // 2. check if inodenum returns error
+    // 2. Check if inodenum returns an error.
     if (dir_inodenum < 0) {
         return dir_inodenum; // return the error code
     }
 
-    // 3. get the inode
+    // 3. Get the inode using the inum.
     struct fs_inode dir_inode; 
     if (block_read(&dir_inode, dir_inodenum, 1) < 0) {
         free(_path);
         return -EIO;
     }
-    // 4. make sure this is a dir's inode
+
+    // 4. Make sure this is a dir's inode.
     if (!S_ISDIR(dir_inode.mode)) {
         free(_path);
         return -ENOTDIR;
     }
 
-    // 5. copy the dir_entries to mem 
-    // get all its entries from disk (4096/32B = 128 entries) to memory
+    // 5. Copy all of its entries from disk (4096/32B = 128 entries) to memory 
+    // in `di_entries`. 
     if (block_read(dir_entries, dir_inode.ptrs[0], 1) < 0) {
         free(_path);
         return -EIO;
@@ -545,12 +528,11 @@ int get_dir_entries(const char *path, struct fs_dirent *dir_entries) {
  * success - return 0
  * errors - path resolution, ENOTDIR, ENOENT
  *
- * hints:
- *   - this process is similar to the fs_getattr:
- *     -- you will walk file system to find the dir pointed by "path",
- *     -- then you need to call "filler" for each of
+ *  This process is similar to the fs_getattr:
+ *     -- Walk file system to find the dir pointed by "path",
+ *     -- tCall "filler" for each of
  *        the *valid* entry in this dir
- *   - you can ignore "struct fuse_file_info *fi" (also apply to later Exercises)
+ *   - Ignore "struct fuse_file_info *fi"
  */
 int fs_readdir(const char *path, void *ptr, fuse_fill_dir_t filler,
                off_t offset, struct fuse_file_info *fi)
@@ -615,10 +597,10 @@ int fs_read(const char *path, char *buf, size_t len, off_t offset,
     size_t bytes_num_to_read = len;
     off_t start_ith_byte = offset;
     
-    // Part1: get the inode of the file
+    // Part1: Get the inode of the file
     int file_inum = path2inum(path);
     if (file_inum < 0) {
-        return file_inum; // return the error code from path2inum
+        return file_inum; // return the error code from path2inum.
     }
 
     // Read the file inode from disk
@@ -627,8 +609,7 @@ int fs_read(const char *path, char *buf, size_t len, off_t offset,
         return -EIO;
     }
 
-    // Part 2: Validate
-    // Check if the inode is a directory, return EISDIR if it is
+    // Part 2: Validate: Check if the inode is a directory, return EISDIR if it is.
     if (S_ISDIR(file_inode.mode)) {
         return -EISDIR;
     }
@@ -649,12 +630,12 @@ int fs_read(const char *path, char *buf, size_t len, off_t offset,
     // path, bytes_num_to_read, start_ith_byte, file_inode.size);
 
     off_t end_ith_byte = start_ith_byte + bytes_num_to_read;
+
     // Part 4: calculate the starting pointer and end pointer index
     int start_ptr_i = start_ith_byte / FS_BLOCK_SIZE;
     int end_ptr_i = (start_ith_byte + bytes_num_to_read -1) / FS_BLOCK_SIZE;
     // printf("start_ptr_i=%d, end_ptr_i=%d num_blocks_r=%d,bytes_num_to_read=%ld\n", 
     // start_ptr_i, end_ptr_i, num_blocks_r, bytes_num_to_read);
-
 
     // Part 5. iterate through each datablock and read
     for (int i = start_ptr_i; i < end_ptr_i + 1; i++) {
@@ -721,7 +702,6 @@ char *copy_string_with_length(const char *stringOriginal, size_t length) {
  * particular, the full version can move across directories, replace a
  * destination file, and replace an empty directory with a full one.
  */
-
 char *get_parent_directory(const char *path) {
 
     // get the last slash = /dir1/file.txt becomes /file.txt
@@ -1217,7 +1197,6 @@ int isvalid_unlink_rmdir(int parent_inum, struct fs_inode *parent_inode, int dif
 
 int helper_unlink_rmdir(const char *path, int isDir){
 
-    
     char * parent_path = get_parent_directory(path);
     int parent_inum = path2inum(parent_path);
     int difi_inum = path2inum(path);
@@ -1284,6 +1263,8 @@ int helper_unlink_rmdir(const char *path, int isDir){
     free(parent_path);
     return 0;
 }
+
+
 /* EXERCISE 5:
  * unlink - delete a file
  *  success - return 0
@@ -1316,11 +1297,10 @@ int fs_rmdir(const char *path)
 
 
 /**
- * 6.1 helper validate
+ * 6.1 Helper function to validate if path to write is correct.
 */
-
 int helper_validate_write(const char* path, struct fs_inode* file_inode, int *file_inum, size_t bytes_num_to_write, off_t start_ith_byte) {
-    // Part 1: path validation
+    // Part 1: Path validation.
     // inum not found
     *file_inum = path2inum(path);
     if (*file_inum < 0)  {
@@ -1331,28 +1311,28 @@ int helper_validate_write(const char* path, struct fs_inode* file_inode, int *fi
         printf("hvw: cannot block read\n");
         return -EIO;
     }
-    // inode is not dir
+    // inode is not a directory.
     if(S_ISDIR(file_inode->mode)) {
         printf("hvw: file is dir\n");
         return -EISDIR;
     }
 
-    // Part 2: size validation
+    // Part 2: Size validation.
     // offset greater than current file length
     if (start_ith_byte > file_inode->size) {
         printf("hvw: offset greater than current size\n");
         return -EINVAL;
     }
-    // calculate the maximum file size
+    // Total data exceed max size of file.
+    // - Calculate the maximum file size.
     size_t max_file_size = FS_BLOCK_SIZE * (sizeof(file_inode->ptrs) / sizeof(file_inode->ptrs[0]));
-
-    // total data exceed max size of file
     if (start_ith_byte + bytes_num_to_write > max_file_size) {
         printf("hvw: total data exceeds\n");
         return -ENOSPC;
     }
     return 0;
 }
+
 /* EXERCISE 6:
  * write - write data to a file
  * success - return number of bytes written. (this will be the same as
@@ -1368,16 +1348,12 @@ int helper_validate_write(const char* path, struct fs_inode* file_inode, int *fi
 int fs_write(const char *path, const char *buf, size_t len,
          off_t offset, struct fuse_file_info *fi)
 {
-
-
-
-    // Part 0. Validate
+    // Part 0. Validate path and:
+    // - Get the inode and the inum.
+    // - Get the starting and end pointer index of the data block.
     size_t bytes_num_to_write = len;
     off_t start_ith_byte = offset;
     off_t end_ith_byte = start_ith_byte + bytes_num_to_write;
-
-
-
 
     struct fs_inode file_inode;
     int file_inum;
@@ -1388,83 +1364,80 @@ int fs_write(const char *path, const char *buf, size_t len,
         return isValid;
     }
 
-
-    // Part 1. Get start_ptr_i and end_ptr_i so we can read all the required block number from the file_inode
+    // Part 1. Get start_ptr_i and end_ptr_i so we can read all the required data block number from the file_inode.
     int start_ptr_i = start_ith_byte / FS_BLOCK_SIZE;
     int end_ptr_i = (end_ith_byte - 1) / FS_BLOCK_SIZE;
-    // printf("    start_ptr_i=%d,end_ptr_i=%d\n", start_ptr_i, end_ptr_i);
     
-    // PART 2&3. go to each block of disk
+    // PART 2 & 3. Go to each data block on the disk.
     for (int curr_ptr_i = start_ptr_i; curr_ptr_i <= end_ptr_i; curr_ptr_i++) {
 
-        // Part 2: get the inum we want to write the data to
-        // - 2.1 get the data inum = 
+        // Part 2: Get the inum of the block we want to write to.
+        // - 2.1 Get the data inum.
         int data_inum = file_inode.ptrs[curr_ptr_i];
 
-        // - 2.2 init the mem_fullblock
+        // - 2.2 Init the mem_fullblock.
         char mem_fullblock[FS_BLOCK_SIZE];  
         memset(mem_fullblock, 0, FS_BLOCK_SIZE);
 
+        // - 2.2 Case A: Data block already exist, read the block to mem.
+        // Data block already exist and valid if:
+        // a) It's neither a superblock, block bitmap, or root inode.
+        // b) Inode number does not exceed the total number of blocks.
+        // c) Bit test != 0, means it's in use.
         int allocateNewBlk = 0;
-        // - 2.2 Case A datablock already exsit. block_read to mem
         if (data_inum >= 3 && data_inum < num_blocks && (bit_test(block_bitmap, data_inum) != 0)){
             
             // printf("    data already exist=%d\n", bit_test(block_bitmap, data_inum)); // gives me 16
             if (block_read(mem_fullblock, data_inum, 1) < 0) {
                 return -EIO;
             }
-        // - 2.3 case B doesnt exist alloc block for this
+        // - 2.3 Case B: Data block doesn't exist, allocate a block for this.
         } else {
-            allocateNewBlk=1;
+            allocateNewBlk = 1;
             // printf("    data not yet exist=%d\n", bit_test(block_bitmap, data_inum)); // gives me 32
             // - alloc to file inode ptrs i
             file_inode.ptrs[curr_ptr_i] = alloc_blk();
         }
 
-        
-
-        // Part 3: write block to disk: REMEMBER TO DO free alloc again if anythin fails here
-        // - 3.1 get the block start_i
+        // Part 3: Write block to disk: REMEMBER to do free alloc again if anything fails here.
+        // - 3.1 Get the block start_i.
         off_t block_start_i;
-        // if this is the first block, find the block_start_i manuallya
+        // If this is the first block, find the block_start_i manually.
         if (curr_ptr_i == start_ptr_i) {
             block_start_i = start_ith_byte % FS_BLOCK_SIZE;
         } else {
             block_start_i = 0;
         }
 
-        // - 3.2 get the block end_i
+        // - 3.2 Get the block end_i.
         off_t block_end_i;
         if (curr_ptr_i == end_ptr_i && (end_ith_byte % FS_BLOCK_SIZE != 0)) {
-            block_end_i = end_ith_byte % FS_BLOCK_SIZE; // all the end i are exclusive
+            block_end_i = end_ith_byte % FS_BLOCK_SIZE; // All the end_i are exclusive.
         } else {
             block_end_i = FS_BLOCK_SIZE;
         }
 
-        // - 3.3 get the length of the data to write
+        // - 3.3 Get the length of the data to write.
         size_t len_write_perblock = block_end_i - block_start_i;
 
-        // - 3.4 memcpy from buffer to dst (mem_full_bloc + block_start_i)
+        // - 3.4 memcpy from buffer to dst (mem_full_bloc + block_start_i).
         void *dst = mem_fullblock + block_start_i;
         memcpy(dst, buf, len_write_perblock);
-        // printf("    mem_fullblock=%p\n", mem_fullblock);
-        // printf("    dst=%p\n", dst);
         
-        // - 3.5 block_write this data to the inum we get from part 2
+        // - 3.5 Block_write this data to the inum we get from part 2.
         if (block_write(mem_fullblock, file_inode.ptrs[curr_ptr_i], 1) < 0) {
             if (allocateNewBlk ==1) {
                 free_blk(file_inode.ptrs[curr_ptr_i]);
             }
-            // handle free blok again
+            // handle free block again.
             return -EIO;
         }
 
-        // ---->Print what's been written on the mem_fullblock
+        // ----> Print what's been written on the mem_fullblock.
         // printf("    buf contents (hex): ");
         // for (size_t i = 0; i < len; i++) {
         //     printf("%02x ", (unsigned char)buf[i]);
         // }
-
         // printf("\n");
         // printf("    mem_fullblock written portion: ");
         // for (off_t i = block_start_i; i < block_end_i; i++) {
@@ -1475,18 +1448,16 @@ int fs_write(const char *path, const char *buf, size_t len,
         // - 3.6 increment buffer for next write
         buf += len_write_perblock;
     }
-
-
         
-    // Part 4. update file_inode'size
+    // Part 4. Update file_inode'size.
     if (end_ith_byte > file_inode.size) {
         file_inode.size = end_ith_byte;
     }
     file_inode.mtime = time(NULL);
 
-    // Part 5. block write file_inode
+    // Part 5. Update the file_inode.
     if (block_write(&file_inode, file_inum, 1) < 0) {
-        // handle free bok again
+        // handle free block again
         return -EIO;
     }
 
@@ -1534,8 +1505,6 @@ int fs_truncate(const char *path, off_t len)
     if (block_write(&file_inode, file_inum, 1) < 0) {
         return -EIO;
     }
-    
-
 
     return 0;
 }
@@ -1582,8 +1551,8 @@ int fs_utime(const char *path, struct utimbuf *ut)
 }
 
 
-
-/* operations vector. Please don't rename it, or else you'll break things
+/* 
+ * Operations vector. Please don't rename it, or else you'll break things
  */
 struct fuse_operations fs_ops = {
     .init = fs_init,            /* read-mostly operations */
