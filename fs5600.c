@@ -640,7 +640,7 @@ int fs_read(const char *path, char *buf, size_t len, off_t offset,
     // Part 5. iterate through each datablock and read
     for (int i = start_ptr_i; i < end_ptr_i + 1; i++) {
         
-        // 1. get the whole block from disk to memory
+        // 1. Get the whole block from disk to memory.
         char mem_block[FS_BLOCK_SIZE];
         if (block_read(mem_block, file_inode.ptrs[i], 1) < 0) {
             return -EIO;
@@ -669,9 +669,8 @@ int fs_read(const char *path, char *buf, size_t len, off_t offset,
 
         // 4. increment buffer address for next data block
         buf += (sz);
-
-
     }
+
     // Return the number of bytes read
     return bytes_num_to_read;
 }
@@ -1002,9 +1001,10 @@ int find_free_block_number(int exclude_block_num) {
 
 /**
  * Helper 4.4 that implements both fs_create and fs_mkdir
+ * which will create either a file or a directory.
 */
 int create_mkdir_helper(const char *path, mode_t mode, int isDir) {
-    // printf("\nmkdir/create path=>>>>%s\n", path);
+
     uint32_t cur_time = time(NULL);
     struct fuse_context *ctx = fuse_get_context();
     uint16_t uid = ctx->uid;
@@ -1030,12 +1030,12 @@ int create_mkdir_helper(const char *path, mode_t mode, int isDir) {
         return isValid;
     }
 
-    // PART 1: find two empty block number from bitmap 1 for newdifi inode 1 for newdifi data
+    // PART 1: Find two empty block number from bitmap 1 for newdifi inode 1 for newdifi data
     // read bitmap block assume theres always free node
     int newdifi_inode_num = find_free_block_number(-1);
     int newdifi_datablock_num = find_free_block_number(newdifi_inode_num);
 
-    // PART 2B: create the inode of this new dir and fillin
+    // PART 2B: Create the inode of this new dir and fill in.
     struct fs_inode newdifi_inode;
     newdifi_inode.gid = gid;
     newdifi_inode.uid = uid;
@@ -1054,8 +1054,7 @@ int create_mkdir_helper(const char *path, mode_t mode, int isDir) {
         newdifi_inode.mode = S_IFREG | permission_bit_given_mode;
     }
     
-
-    // PART 3: fill in the fs_dirent
+    // PART 3: fill in the fs_dirent for the parent node.
     struct fs_dirent newdifi_entry;
     newdifi_entry.valid = 1;
     newdifi_entry.inode = newdifi_inode_num;
@@ -1088,7 +1087,6 @@ int create_mkdir_helper(const char *path, mode_t mode, int isDir) {
 
     // new inode and data
     block_write(&newdifi_inode, newdifi_inode_num, 1);
-    
 
     // PART 2A: create the data of this new dir
     if (isDir > 0) {
@@ -1108,9 +1106,6 @@ int create_mkdir_helper(const char *path, mode_t mode, int isDir) {
     // printf("freeblock is=>%d, after assign block=>%d\n", newdifi_inode_num, testnewinum);
     
     free(parent_path);
-
-
-    
     return 0;
 }
 
@@ -1420,16 +1415,15 @@ int fs_write(const char *path, const char *buf, size_t len,
         // - 3.3 Get the length of the data to write.
         size_t len_write_perblock = block_end_i - block_start_i;
 
-        // - 3.4 memcpy from buffer to dst (mem_full_bloc + block_start_i).
+        // - 3.4 memcpy from buffer (the data we want to write) to dst (mem_full_bloc + block_start_i).
         void *dst = mem_fullblock + block_start_i;
         memcpy(dst, buf, len_write_perblock);
         
         // - 3.5 Block_write this data to the inum we get from part 2.
         if (block_write(mem_fullblock, file_inode.ptrs[curr_ptr_i], 1) < 0) {
-            if (allocateNewBlk ==1) {
+            if (allocateNewBlk == 1) {
                 free_blk(file_inode.ptrs[curr_ptr_i]);
             }
-            // handle free block again.
             return -EIO;
         }
 
@@ -1445,7 +1439,7 @@ int fs_write(const char *path, const char *buf, size_t len,
         // }
         // printf("\n");
 
-        // - 3.6 increment buffer for next write
+        // - 3.6 Increment buffer pointer for next write.
         buf += len_write_perblock;
     }
         
