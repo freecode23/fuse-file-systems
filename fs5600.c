@@ -192,11 +192,7 @@ void print_node_info(int inode_num, struct fs_inode curr_inode) {
 }
 
 int path2inum(const char *path) {
-    // printf("path2inum>>>>\n");
     char *_path = strdup(path);
-    // char *_path = strdup("/file.8k+/file.0");
-    // printf("\n>>>>split path=%s\n", path);
-
     char *token;
     char *tokens[10]; // 11 excl root dir
     int depth = 0;
@@ -251,8 +247,7 @@ int path2inum(const char *path) {
             return -EIO;
         }
 
-        // iterate through all the entries to find one that matches the curr token name
-        //TODO CHANGE BACK TO DIRENTRY NUM
+        // Iterate through all the entries to find one that matches the curr token name
         for (int dir_entry_i = 0; dir_entry_i < DIR_ENTRY_NUM; dir_entry_i++) {
             // printf("entry name %d=%s, tokenname=%s\n", dir_entry_i, dir_entries[dir_entry_i].name, token_name);
             if (strcmp(dir_entries[dir_entry_i].name, token_name ) == 0 && dir_entries[dir_entry_i].valid == 1) {
@@ -285,7 +280,6 @@ int path2inum(const char *path) {
 
     } // finish iterate token. the last inode could be a file or dir inode
 
-    // print_node_info(curr_inode_num, curr_inode);
     return curr_inode_num;
 }
 
@@ -392,7 +386,7 @@ void* fs_init(struct fuse_conn_info *conn)
 /* EXERCISE 1:
  * statfs - get file system statistics
  * see 'man 2 statfs' for description of 'struct statvfs'.
- * Errors - none. Needs to work.
+ * Errors - none.
  */
 
 int calc_used_blocks() {
