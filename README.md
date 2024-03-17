@@ -1,4 +1,7 @@
-# File System using FUSE
+# File System Implementation using FUSE
+
+This is an implementation of a simplified Unix-like file system, called fs5600.
+fs5600 uses the FUSE (File system in User SpacE) library, which allows us to implement a file system in the user space. This makes the development much easier than in the kernel space. FUSE exposes a few file system function interfaces that need to be instantiated.
 Open the walkthrough pdf file [here](https://github.com/freecode23/fuse-file-systems/blob/main/walkthrough.pdf) for in-depth walkthrough of this project.
 
 ## 1. Install required packages
