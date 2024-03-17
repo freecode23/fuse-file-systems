@@ -44,7 +44,11 @@ You should see:
 ```
 
 You should see that we have now associated `fs` with `test.img` if we run `df fs` again:
----> Insert new fs here.
+```
+Filesystem     1K-blocks  Used Available Use% Mounted on
+lab5fuse            1600    56      1544   4% /home/cs5600/Desktop/fuse-file-systems/fs
+```
+
 
 ### Note:
 - When you mount `test.img` to `fs`, the operating system makes the contents of `test.img` accessible through the directory structure starting at `fs`. Essentially, `fs` becomes the root directory of the file system contained in `test.img`.
