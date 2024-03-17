@@ -10,9 +10,9 @@ sudo apt install python2
 ```
 
 ## 2. Create the filesystem and the root directory.
-1. 
+1. Clone this repo and build the executable:
 ```
-cd ~/fuse-filesystems
+cd /fuse-file-systems
 make 
 ```
 You should see:
@@ -20,8 +20,8 @@ You should see:
  cc -ggdb3 -Wall -O0   -c -o misc.o misc.c
  ...
 ```
-3. Create a directory to serve as a mount point
-Create a mount point, that is, create a directory where a file system will be attached:
+2. Create a directory to serve as a mount point
+Create a mount point called `fs`, that is, create a directory where a file system will be attached:
 mkdir fs   
 
 4. Show the disk space usage of the file system on which that directory is mounted:
@@ -42,5 +42,18 @@ You should see that we have now associated fs with test.img
 - When you mount `test.img` to `fs`, the operating system makes the contents of `test.img` accessible through the directory structure starting at `fs`. Essentially, `fs` becomes the root directory of the file system contained in `test.img`.
 
 ## 4. Test the Commands.
+```
+1. cd fs
+2. mkdir 
+3. touch
+4. cat
+5. ls
+6. rm 
+```
 
-##
+
+## 5. Unmount the filsystem from `fs`
+you can umount your fs5600 by:
+```
+fusermount -u fs
+```
