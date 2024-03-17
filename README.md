@@ -1,7 +1,7 @@
 # File System using FUSE
 Open the walkthrough pdf file [here](https://github.com/freecode23/fuse-file-systems/blob/main/walkthrough.pdf) for in-depth walkthrough of this project.
 
-## 1. Install Required Packages.
+## 1. Install required packages
 ```
 sudo apt install check
 sudo apt install libfuse-dev
@@ -9,7 +9,7 @@ sudo apt install zlib1g-dev
 sudo apt install python2
 ```
 
-## 2. Create the filesystem and the root directory.
+## 2. Create the filesystem and the root directory
 1. Clone this repo and build the executable:
 ```
 cd /fuse-file-systems
@@ -46,7 +46,7 @@ You should see that we have now associated `fs` with `test.img` if we run `df fs
 ### Note:
 - When you mount `test.img` to `fs`, the operating system makes the contents of `test.img` accessible through the directory structure starting at `fs`. Essentially, `fs` becomes the root directory of the file system contained in `test.img`.
 
-## 3. Test the Commands.
+## 3. Test with some commands
 
 We can now test our new file system with the common linux commands:
 ```
@@ -61,10 +61,10 @@ etc.
 Here are some sample demo of creating a directory, create a file within that directory.
 Write to that file, and read back from that file.
 Notice that all of these command is associated with the fuse file system!
-### Demo1: Creating a a new directory and check that this directory is using our fuse filesystem.
+### Demo 1: Creating a a new directory and check that this directory is using our fuse filesystem.
 <img width="1177" alt="Screenshot 2024-03-17 at 3 33 12 PM" src="https://github.com/freecode23/fuse-file-systems/assets/67333705/e117f42d-37e3-4f58-a33f-16945f3a4794">
 
-### Demo2: Create a new text file, write and read them back using `cat`.
+### Demo 2: Create a new text file, write and read them back using `cat`.
 <img width="658" alt="Screenshot 2024-03-17 at 3 23 31 PM" src="https://github.com/freecode23/fuse-file-systems/assets/67333705/cebc1bcd-a812-4425-a9c9-c5c602ccdb42">
 
 ## 4. Unmount the filsystem from `fs`
