@@ -37,13 +37,19 @@ You should see:
  Filesystem     1K-blocks    Used Available Use% Mounted on
  /dev/sda1        7092728 4536616   2172780  68% /
 ```
+Filesystem: `/dev/sda1` indicates that this entry is about the first partition on the first detected SATA/SCSI disk.
+1K-blocks: Shows the total capacity of this partition in 1-kilobyte blocks.
+Used: Displays how much of that capacity is currently used (in 1-kilobyte blocks).
+Available: Indicates the remaining available space (in 1-kilobyte blocks).
+Use%: Shows the percentage of the partition that is used.
+Mounted on: Specifies the mount point of this file system in the directory tree. The / indicates that /dev/sda1 is mounted as the root file system of the system.
 
 4. Mounts the file system from `test.img` to the mount point `fs` using the `lab5fuse` program:
 ```
 ./lab5fuse -image test.img fs
 ```
 
-You should see that we have now associated `fs` with `test.img` if we run `df fs` again:
+If we run `df fs` again, we see that we have now associated `fs` with our `lab5fuse` file system:
 ```
 Filesystem     1K-blocks  Used Available Use% Mounted on
 lab5fuse            1600    56      1544   4% /home/cs5600/Desktop/fuse-file-systems/fs
