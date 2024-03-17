@@ -80,7 +80,7 @@ Notice that all of these command is associated with the fuse file system!
 ### Demo 2: Create a new text file, write and read them back using `cat`.
 <img width="658" alt="Screenshot 2024-03-17 at 3 23 31 PM" src="https://github.com/freecode23/fuse-file-systems/assets/67333705/cebc1bcd-a812-4425-a9c9-c5c602ccdb42">
 
-## 4. Unmount the filsystem from `fs`
+## 4. Unmount the file system from `fs`
 you can umount your fs5600 by:
 ```
 fusermount -u fs
