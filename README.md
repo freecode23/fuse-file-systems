@@ -28,7 +28,7 @@ You should see:
 mkdir fs
 ```
 
-4. Show the disk space usage of the file system on which that directory is mounted:
+3. Show the disk space usage of the file system on which that directory is mounted:
 ```
 df fs
 ```
@@ -38,7 +38,7 @@ You should see:
  /dev/sda1        7092728 4536616   2172780  68% /
 ```
 
-5. Mounts the file system from `test.img` to the mount point `fs` using the `lab5fuse` program:
+4. Mounts the file system from `test.img` to the mount point `fs` using the `lab5fuse` program:
 ```
 ./lab5fuse -image test.img fs
 ```
